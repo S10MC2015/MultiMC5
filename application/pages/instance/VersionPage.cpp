@@ -43,6 +43,7 @@
 #include "icons/IconList.h"
 #include "Exception.h"
 #include "Version.h"
+#include "DesktopServices.h"
 
 #include <meta/Index.h>
 #include <meta/VersionList.h>
@@ -205,7 +206,7 @@ void VersionPage::updateVersionControls()
     bool newCraft = controlsEnabled && (minecraftVersion >= Version("1.14"));
     bool oldCraft = controlsEnabled && (minecraftVersion <= Version("1.12.2"));
     ui->actionInstall_Fabric->setEnabled(newCraft);
-    ui->actionInstall_Forge->setEnabled(oldCraft);
+    ui->actionInstall_Forge->setEnabled(true);
     ui->actionInstall_LiteLoader->setEnabled(oldCraft);
     ui->actionReload->setEnabled(true);
     updateButtons();
@@ -505,6 +506,16 @@ void VersionPage::on_actionInstall_LiteLoader_triggered()
         preselect(m_profile->rowCount(QModelIndex())-1);
         m_container->refreshContainer();
     }
+}
+
+void VersionPage::on_actionLibrariesFolder_triggered()
+{
+    DesktopServices::openDirectory(m_inst->getLocalLibraryPath(), true);
+}
+
+void VersionPage::on_actionMinecraftFolder_triggered()
+{
+    DesktopServices::openDirectory(m_inst->gameRoot(), true);
 }
 
 void VersionPage::versionCurrent(const QModelIndex &current, const QModelIndex &previous)

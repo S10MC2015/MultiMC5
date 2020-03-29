@@ -34,11 +34,8 @@
 
 #include "widgets/PageContainer.h"
 #include <pages/modplatform/VanillaPage.h>
-#include <pages/modplatform/FTBPage.h>
-#include <pages/modplatform/TwitchPage.h>
+#include <pages/modplatform/legacy_ftb/Page.h>
 #include <pages/modplatform/ImportPage.h>
-#include <pages/modplatform/TechnicPage.h>
-
 
 
 NewInstanceDialog::NewInstanceDialog(const QString & initialGroup, const QString & url, QWidget *parent)
@@ -97,14 +94,8 @@ NewInstanceDialog::NewInstanceDialog(const QString & initialGroup, const QString
     if(!url.isEmpty())
     {
         QUrl actualUrl(url);
-        if(actualUrl.host() == "www.curseforge.com") {
-            m_container->selectPage("twitch");
-            twitchPage->setUrl(url);
-        }
-        else {
-            m_container->selectPage("import");
-            importPage->setUrl(url);
-        }
+        m_container->selectPage("import");
+        importPage->setUrl(url);
     }
 
     updateDialogState();
@@ -128,13 +119,11 @@ void NewInstanceDialog::accept()
 QList<BasePage *> NewInstanceDialog::getPages()
 {
     importPage = new ImportPage(this);
-    twitchPage = new TwitchPage(this);
     return
     {
         new VanillaPage(this),
         importPage,
-        twitchPage,
-        new FTBPage(this)
+        new LegacyFTB::Page(this),
     };
 }
 

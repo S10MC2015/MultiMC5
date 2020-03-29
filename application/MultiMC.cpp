@@ -15,7 +15,6 @@
 #include "pages/global/ExternalToolsPage.h"
 #include "pages/global/AccountListPage.h"
 #include "pages/global/PasteEEPage.h"
-#include "pages/global/PackagesPage.h"
 #include "pages/global/CustomCommandsPage.h"
 
 #include "themes/ITheme.h"
@@ -35,6 +34,7 @@
 #include <QNetworkAccessManager>
 #include <QTranslator>
 #include <QLibraryInfo>
+#include <QList>
 #include <QStringList>
 #include <QDebug>
 #include <QStyleFactory>
@@ -174,6 +174,10 @@ MultiMC::MultiMC(int &argc, char **argv) : QApplication(argc, argv)
         // --alive
         parser.addSwitch("alive");
         parser.addDocumentation("alive", "Write a small '" + liveCheckFile + "' file after MultiMC starts");
+        // --import
+        parser.addOption("import");
+        parser.addShortOpt("import", 'I');
+        parser.addDocumentation("import", "Import instance from specified zip (local path or URL)");
 
         // parse the arguments
         try
@@ -208,6 +212,7 @@ MultiMC::MultiMC(int &argc, char **argv) : QApplication(argc, argv)
     }
     m_instanceIdToLaunch = args["launch"].toString();
     m_liveCheck = args["alive"].toBool();
+    m_zipToImport = args["import"].toUrl();
 
     QString origcwdPath = QDir::currentPath();
     QString binPath = applicationDirPath();
@@ -279,13 +284,20 @@ MultiMC::MultiMC(int &argc, char **argv) : QApplication(argc, argv)
         connect(m_peerInstance, &LocalPeer::messageReceived, this, &MultiMC::messageReceived);
         if(m_peerInstance->isClient())
         {
+            int timeout = 2000;
+
             if(m_instanceIdToLaunch.isEmpty())
             {
-                m_peerInstance->sendMessage("activate", 2000);
+                m_peerInstance->sendMessage("activate", timeout);
+
+                if(!m_zipToImport.isEmpty())
+                {
+                    m_peerInstance->sendMessage("import " + m_zipToImport.toString(), timeout);
+                }
             }
             else
             {
-                m_peerInstance->sendMessage(m_instanceIdToLaunch, 2000);
+                m_peerInstance->sendMessage("launch " + m_instanceIdToLaunch, timeout);
             }
             m_status = MultiMC::Succeeded;
             return;
@@ -527,7 +539,6 @@ MultiMC::MultiMC(int &argc, char **argv) : QApplication(argc, argv)
             m_globalSettingsProvider->addPage<LanguagePage>();
             m_globalSettingsProvider->addPage<CustomCommandsPage>();
             m_globalSettingsProvider->addPage<ProxyPage>();
-            // m_globalSettingsProvider->addPage<PackagesPage>();
             m_globalSettingsProvider->addPage<ExternalToolsPage>();
             m_globalSettingsProvider->addPage<AccountListPage>();
             m_globalSettingsProvider->addPage<PasteEEPage>();
@@ -814,6 +825,11 @@ void MultiMC::performMainStartupAction()
         showMainWindow(false);
         qDebug() << "<> Main window shown.";
     }
+    if(!m_zipToImport.isEmpty())
+    {
+        qDebug() << "<> Importing instance from zip:" << m_zipToImport;
+        m_mainWindow->droppedURLs({ m_zipToImport });
+    }
 }
 
 void MultiMC::showFatalErrorMessage(const QString& title, const QString& content)
@@ -850,17 +866,39 @@ void MultiMC::messageReceived(const QString& message)
         qDebug() << "Received message" << message << "while still initializing. It will be ignored.";
         return;
     }
-    if(message == "activate")
+
+    QStringList args = message.split(' ');
+    QString command = args.takeFirst();
+
+    if(command == "activate")
     {
         showMainWindow();
     }
-    else
+    else if(command == "import")
     {
-        auto inst = instances()->getInstanceById(message);
+        if(args.isEmpty())
+        {
+            qWarning() << "Received" << command << "message without a zip path/URL.";
+            return;
+        }
+        m_mainWindow->droppedURLs({ QUrl(args.takeFirst()) });
+    }
+    else if(command == "launch")
+    {
+        if(args.isEmpty())
+        {
+            qWarning() << "Received" << command << "message without an instance ID.";
+            return;
+        }
+        auto inst = instances()->getInstanceById(args.takeFirst());
         if(inst)
         {
             launch(inst, true, nullptr);
         }
+    }
+    else
+    {
+        qWarning() << "Received invalid message" << message;
     }
 }
 

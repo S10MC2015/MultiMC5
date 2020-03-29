@@ -578,6 +578,7 @@ public:
         MainWindow->resize(800, 600);
         MainWindow->setWindowIcon(MMC->getThemedIcon("logo"));
         MainWindow->setWindowTitle("MultiMC 5");
+        MainWindow->setAccessibleName("MultiMC");
 
         createMainToolbar(MainWindow);
 
@@ -1357,7 +1358,7 @@ void MainWindow::on_actionCopyInstance_triggered()
     if (!copyInstDlg.exec())
         return;
 
-    auto copyTask = new InstanceCopyTask(m_selectedInstance, copyInstDlg.shouldCopySaves());
+    auto copyTask = new InstanceCopyTask(m_selectedInstance, copyInstDlg.shouldCopySaves(), copyInstDlg.shouldKeepPlaytime());
     copyTask->setName(copyInstDlg.instName());
     copyTask->setGroup(copyInstDlg.instGroup());
     copyTask->setIcon(copyInstDlg.iconKey());
